@@ -1,0 +1,310 @@
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f3e4ec; /* 加载期间的底色，与樱花色调一致 */
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
+  user-select: none;
+}
+
+#stage,
+#overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#stage {
+  opacity: 0;
+  transition: opacity 1.8s ease;
+}
+
+#stage.ready {
+  opacity: 1;
+}
+
+#overlay {
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ---------- 提示 ---------- */
+#toasts {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(560px, calc(100vw - 48px));
+  pointer-events: none;
+}
+
+.toast {
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(46, 30, 44, 0.62);
+  backdrop-filter: blur(10px);
+  color: #fbeef4;
+  font-size: 13px;
+  line-height: 1.6;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: none;
+}
+
+#fps {
+  display: none;
+  position: fixed;
+  left: 12px;
+  top: 10px;
+  z-index: 20;
+  font: 12px/1.4 Consolas, monospace;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- 调节面板 ---------- */
+#sw-editor {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 330px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 0 14px 14px;
+  border-radius: 14px;
+  background: rgba(36, 24, 36, 0.78);
+  backdrop-filter: blur(14px);
+  color: #f7eef3;
+  font-size: 12.5px;
+  box-shadow: 0 10px 40px rgba(40, 10, 30, 0.35);
+  user-select: auto;
+}
+
+#sw-editor.left {
+  right: auto;
+  left: 16px;
+}
+
+#sw-editor[hidden],
+#sw-editor [hidden] {
+  display: none !important;
+}
+
+#sw-editor header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 8px;
+  background: inherit;
+  z-index: 1;
+}
+
+#sw-editor header b {
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+#sw-editor .sw-hint {
+  opacity: 0.55;
+  flex: 1;
+}
+
+#sw-editor button {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+#sw-editor button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+#sw-editor button.on {
+  background: #e98fb1;
+  color: #2b1426;
+}
+
+#sw-editor .sw-x {
+  padding: 2px 9px;
+  font-size: 16px;
+}
+
+#sw-editor nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#sw-editor nav button {
+  flex: 1;
+}
+
+#sw-editor h4 {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  color: #f4b6cc;
+}
+
+#sw-editor .sw-row {
+  display: grid;
+  grid-template-columns: 112px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+}
+
+#sw-editor .sw-row.sw-bool,
+#sw-editor .sw-row.sw-combo,
+#sw-editor .sw-row.sw-color {
+  grid-template-columns: 112px 1fr;
+}
+
+#sw-editor .sw-row input[type='text'] {
+  grid-column: 2 / 4;
+}
+
+#sw-editor input,
+#sw-editor select,
+#sw-editor textarea {
+  accent-color: #e98fb1;
+  font: inherit;
+  color: inherit;
+}
+
+#sw-editor input[type='checkbox'] {
+  justify-self: start;
+}
+
+#sw-editor select,
+#sw-editor input[type='text'] {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+#sw-editor select option {
+  color: #222;
+}
+
+#sw-editor input[type='color'] {
+  width: 44px;
+  height: 22px;
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+#sw-editor output {
+  text-align: right;
+  font-family: Consolas, monospace;
+  opacity: 0.8;
+}
+
+#sw-editor .sw-check {
+  display: block;
+  margin: 4px 0;
+}
+
+#sw-editor .sw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+#sw-editor .sw-tip {
+  margin: 4px 0 8px;
+  line-height: 1.7;
+  opacity: 0.75;
+}
+
+#sw-editor .sw-zone-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+#sw-editor .sw-zone-fields {
+  margin-top: 10px;
+}
+
+#sw-editor .sw-info {
+  margin: 6px 0 0;
+  font: 12px/1.8 Consolas, 'Microsoft YaHei', monospace;
+  white-space: pre-wrap;
+}
+
+/* 弹窗挂在 body 上 */
+.sw-modal[hidden] {
+  display: none !important;
+}
+
+.sw-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8vh 12vw;
+  background: rgba(20, 12, 20, 0.7);
+  color: #f7eef3;
+  font-size: 13px;
+  user-select: auto;
+}
+
+.sw-modal button {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sw-modal .sw-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sw-modal textarea {
+  flex: 1;
+  min-height: 200px;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(20, 12, 22, 0.9);
+  font: 12px/1.6 Consolas, monospace;
+  color: inherit;
+  resize: none;
+}
+
+.sw-modal-tip {
+  margin: 0 0 10px;
+}
