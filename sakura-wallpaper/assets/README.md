@@ -1,3 +1,4 @@
+![Uploading moegirl_ai_1783148851091_upscayl_2x_digital-art-4x.png…]()
 # 素材目录
 
 把主插画放在这里，命名为 `main.png`（也支持 `main.jpg` / `main.webp`）。
