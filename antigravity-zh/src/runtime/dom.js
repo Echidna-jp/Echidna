@@ -22,9 +22,18 @@ function startDomTranslator(tr, opts) {
     'pre', 'code', 'kbd', 'samp', 'var',
     '[contenteditable]:not([contenteditable="false"])',
     '.monaco-editor', '.monaco-diff-editor', '.xterm', '.cm-editor',
+    '.font-mono', // 等宽字体显示的是代码、路径、命令、按键名，不是界面文字
     '[data-markdown-root]',
     '[data-testid="user-input-step"]',
     '[translate="no"]', '.notranslate', '[data-agzh-skip]',
+  ].join(',');
+  // 这些区域显示的是用户或智能体起的名字（对话标题、文件名、网址等）：
+  // 只翻和界面词完全一样的文字（比如默认标题“New Conversation”），不套用句式
+  const EXACT_ONLY = [
+    '[data-sidebar-row-id]',
+    '[data-testid="hover-card-title"]', '[data-testid="hover-card-subtitle"]',
+    '[data-testid="media-modal-title"]', '[data-testid="webview-download-filename"]',
+    '[data-testid="browser-url-display"]', '[data-testid="browser-url-bar"]',
   ].join(',');
   // 这些区域里连属性也不翻
   const SKIP_ATTR = [
@@ -56,6 +65,7 @@ function startDomTranslator(tr, opts) {
 
   function translateValue(node, v) {
     const parent = node.parentNode;
+    if (parent && parent.nodeType === 1 && parent.closest(EXACT_ONLY)) return tr.translateExact(v);
     if (tr.hasSentences && parent && parent.nodeType === 1 && parent.childNodes.length > 1) {
       const frag = tr.translateFragment(origText(parent, 0), v);
       if (frag !== undefined) return frag;

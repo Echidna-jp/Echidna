@@ -1,3 +1,6 @@
 node_modules/
+!test/fixtures/app.asar.unpacked/node_modules/
 *.agzh-tmp
 *.log
+webui/
+untranslated.json

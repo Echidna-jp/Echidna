@@ -6,9 +6,10 @@
  * 只做“整句精确匹配”：一段文字要么整段命中词典，要么原样保留，
  * 不做子串替换，避免把一句话切成中英混杂的碎片。
  *
- * 词典格式（locales/zh-CN.json）：
- *   text:     { "英文原文": "中文" }
- *   patterns: { "Thought for {0}": "思考了 {0}" }   {n} 是占位符，译文里可以调换顺序
+ * 词典格式（locales/zh-CN/*.json，合并后传进来）：
+ *   text:      { "英文原文": "中文" }
+ *   patterns:  { "Thought for {0}": "思考了 {0}" }   {n} 是占位符，译文里可以调换顺序
+ *   sentences: { "整句原文": { "片段": "译法", ... } }  句中夹着按钮、代码等元素时使用
  */
 
 function createTranslator(data) {
@@ -43,9 +44,10 @@ function createTranslator(data) {
       const m = /^\{(\d+)\}$/.exec(p);
       if (m) {
         slots.push(Number(m[1]));
-        // 紧贴在单词后面的占位符（"step{1}" 里的复数 s）允许为空
+        // 紧贴在单词后面的占位符是复数词尾（"step{1}" 里的 s），只允许 s/es 或空，
+        // 否则 "{0} question{1}" 会把整段长文吞进 {1}。
         const prev = parts[pi - 1] || '';
-        src += /[A-Za-z]$/.test(prev) ? '(.*?)' : '(.+?)';
+        src += /[A-Za-z]$/.test(prev) ? '((?:e?s)?)' : '(.+?)';
       } else if (p) {
         src += escapeRe(p);
         literalLen += p.length;
@@ -54,8 +56,12 @@ function createTranslator(data) {
     }
     if (!slots.length || literalLen < 2) continue;
     src += '$';
+    // 字面部分字母太少的句式（"{0} of {1}"、"{0} and {1}"、"{0} ago"）很容易误伤普通文字，
+    // 比如把 "Terms of Service" 变成 "Terms/Service"。这类“弱句式”只在每个占位符
+    // 都是数字、或本身能被翻译时才生效。
+    const letters = parts.filter((x) => !/^\{\d+\}$/.test(x)).join('').replace(/[^A-Za-z]/g, '').length;
     try {
-      PATTERNS.push({ re: new RegExp(src), slots, zh, lit, literalLen });
+      PATTERNS.push({ re: new RegExp(src), slots, zh, lit, literalLen, weak: letters < 4 });
     } catch (_) { /* 坏的模式直接忽略 */ }
   }
   // 字面部分越长越具体，优先匹配
@@ -105,15 +111,19 @@ function createTranslator(data) {
   const cache = new Map();
   const CACHE_MAX = 20000;
 
-  function lookupExact(key) {
+  function lookupExact(key, anyCase) {
     const v = TEXT.get(key);
     if (v !== undefined) return v;
+    // 忽略大小写只用于 "Sort by" / "Sort By" 这种标题大小写差异；
+    // 单独一个全小写的词（name、type、string…）多半是代码或标识符，不做模糊匹配。
+    // 句式占位符里的词（"{0} 以外的对话" 里的 projects）除外。
+    if (!anyCase && !/[A-Z\s]/.test(key)) return null;
     const lv = LOWER.get(key.toLowerCase());
     return lv == null ? null : lv;
   }
 
-  function lookup(key) {
-    let v = lookupExact(key);
+  function lookup(key, depth = 0) {
+    let v = lookupExact(key, depth > 0);
     if (v != null) return v;
 
     // 末尾标点变体："Model:" -> "模型：" / "Loading" + "…"
@@ -134,17 +144,39 @@ function createTranslator(data) {
       if (!mm) continue;
       const caps = mm.slice(1);
       const byIndex = {};
-      p.slots.forEach((slot, i) => { byIndex[slot] = caps[i]; });
+      const tr = {};
+      let ok = true;
+      p.slots.forEach((slot, i) => {
+        const c = caps[i];
+        byIndex[slot] = c;
+        if (c == null || NUMERIC.test(c)) return;
+        // 占位符里的内容如果本身是界面词（比如状态名），顺手翻译；数字、路径等保持原样。
+        // 再查一层（含句式），例如 "{0} ago" 里的 "about 3 hours"。
+        const t = depth < 1 ? lookup(norm(c), depth + 1) : lookupExact(norm(c), true);
+        if (t != null) tr[slot] = t;
+        else if (p.weak && c.trim()) ok = false;
+      });
+      if (!ok) continue;
       return fill(p.zh, (n) => {
         const c = byIndex[n];
         if (c == null) return '';
-        // 占位符里的内容如果本身是界面词（比如状态名），顺手翻译；数字、路径等保持原样
-        if (/^[\d\s.,:%+\-/]*$/.test(c)) return c;
-        const t = lookupExact(c);
-        return t != null ? t : c;
+        return tr[n] != null ? tr[n] : c;
       });
     }
     return null;
+  }
+
+  /** 只做整句精确匹配（含末尾标点变体），不用句式。用于对话标题等内容区域。 */
+  function translateExact(raw) {
+    if (typeof raw !== 'string' || !raw || raw.length > 4000 || !/[A-Za-z]/.test(raw)) return null;
+    const key = norm(raw);
+    let zh = lookupExact(key);
+    if (zh == null) {
+      const m = /^(.*?[A-Za-z)\]])\s*(\.\.\.|…)$/.exec(key);
+      if (m && lookupExact(m[1]) != null) zh = lookupExact(m[1]) + '…';
+    }
+    if (zh == null || zh === key) return null;
+    return /^\s*/.exec(raw)[0] + zh + /\s*$/.exec(raw)[0];
   }
 
   // 把值填进译文模板，并按中文排版习惯处理占位符两侧的空格：
@@ -229,6 +261,7 @@ function createTranslator(data) {
 
   return {
     translate,
+    translateExact,
     translateFragment,
     hasSentences: SEQ.size > 0 || SEQ_RE.length > 0,
     size: TEXT.size,
@@ -240,7 +273,8 @@ function norm(s) {
   return String(s).replace(/\s+/g, ' ').trim();
 }
 
-const CJK = /[㐀-䶿一-鿿]/;
+const CJK = /[\u3400-\u4dbf\u4e00-\u9fff]/;
+const NUMERIC = /^[\d\s.,:%+\-/]*$/;
 const LATIN = /[A-Za-z0-9]/;
 function needsSpace(a, b) {
   if (!a || !b) return false;

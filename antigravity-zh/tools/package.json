@@ -1,0 +1,9 @@
+{
+  "name": "antigravity-zh-tools",
+  "private": true,
+  "description": "维护用工具（提取界面文案、找出未翻译的词条）。只有维护词典时才需要安装：cd tools && npm install",
+  "devDependencies": {
+    "acorn": "8.14.0",
+    "acorn-walk": "8.3.4"
+  }
+}

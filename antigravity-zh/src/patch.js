@@ -118,7 +118,7 @@ function checkTarget(archive) {
   // 这时如果当成“原版”备份，以后就还原不回真正的原版了。
   for (const f of ['dist/main.js', 'dist/preload.js', 'dist/menu.js', 'dist/tray.js', 'dist/updater.js']) {
     if (!asar.getNode(archive, f)) continue;
-    if (/[一-鿿]/.test(asar.readFile(archive, f).toString('utf8'))) {
+    if (/[\u4e00-\u9fff]/.test(asar.readFile(archive, f).toString('utf8'))) {
       throw new Error('这个 app.asar 已经被其他汉化工具改过（不是官方原版）。请先重新安装官方 Antigravity，再运行本工具。');
     }
   }
