@@ -1,0 +1,49 @@
+{
+ "_comment": "桌面外壳（Electron 主进程）里的文字：托盘菜单、系统对话框、启动画面、IDE 迁移向导。来源 app.asar/dist/*.js（2.29.0）。",
+ "text": {
+  "No agents running": "没有正在运行的智能体",
+  "1 agent running": "1 个智能体正在运行",
+  "Open Antigravity": "打开 Antigravity",
+  "Quit": "退出",
+  "New Window": "新建窗口",
+  "Docs": "文档",
+  "Connect to WSL": "连接到 WSL",
+  "Reopen Locally": "在本地重新打开",
+  "Check for Updates": "检查更新",
+  "Checking for Updates...": "正在检查更新…",
+  "Downloading Update...": "正在下载更新…",
+  "Restart to Update": "重启以更新",
+  "No updates available": "没有可用的更新",
+  "OK": "确定",
+  "Cancel": "取消",
+  "Confirm Quit": "确认退出",
+  "Are you sure you want to quit?": "确定要退出吗？",
+  "There may be agents or background tasks running.": "可能还有智能体或后台任务正在运行。",
+  "Cannot open folder": "无法打开文件夹",
+  "Folder is on the Windows filesystem": "文件夹位于 Windows 文件系统上",
+  "Binary not found": "找不到可执行文件",
+  "WSL setup failed": "WSL 设置失败",
+  "Startup failed": "启动失败",
+  "Antigravity opened on Windows instead.": "已改为在 Windows 上打开 Antigravity。",
+  "Select a passkey account to continue:": "选择一个通行密钥账号以继续：",
+  "Antigravity IDE": "Antigravity IDE",
+  "Download the Antigravity IDE": "下载 Antigravity IDE",
+  "Explore the new Antigravity": "探索全新的 Antigravity",
+  "Setting up…": "正在设置…",
+  "Welcome to Antigravity": "欢迎使用 Antigravity",
+  "Welcome to the new Antigravity!": "欢迎使用全新的 Antigravity！"
+ },
+ "patterns": {
+  "{0} agents running": "{0} 个智能体正在运行",
+  "Open {0}": "打开 {0}",
+  "Sign in to {0}": "登录 {0}",
+  "Setting up WSL: {0}": "正在设置 WSL：{0}",
+  "The WSL distro \"{0}\" is no longer installed.": "WSL 发行版“{0}”已不再安装。"
+ },
+ "sentences": {
+  "Antigravity has been redesigned to put agents first with new capabilities. If you'd still like a code editor, you can download it as a separate app named Antigravity IDE.": {
+   "Antigravity has been redesigned to put agents first with new capabilities. If you'd still like a code editor, you can download it as a separate app named": "Antigravity 已全新改版，以智能体为中心并带来了新功能。如果仍需要代码编辑器，可以单独下载名为",
+   ".": "的应用。"
+  }
+ }
+}
