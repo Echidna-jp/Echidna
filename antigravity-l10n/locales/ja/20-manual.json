@@ -1,0 +1,65 @@
+{
+ "_comment": "手作業の追加分：相対時間、文全体のルール、組み込みスキルの説明など。",
+ "text": {
+  "a day": "1 日",
+  "a minute": "1 分",
+  "a month": "1 か月",
+  "a year": "1 年",
+  "an hour": "1 時間",
+  "Automatically migrate legacy workflows to modern skills across global and workspace configurations. Scans for existing workflows, creates target SKILL.md files, and safely archives old workflow files.": "グローバルとワークスペースの構成にある従来のワークフローを、新しいスキルに自動的に移行します。既存のワークフローを検出し、対応する SKILL.md ファイルを作成して、古いワークフロー ファイルを安全にアーカイブします。",
+  "Comprehensive guide and reference for the Antigravity Customization System. Use to explain how customizations work, their loading priority, discovery mechanisms, and to guide the creation of skills, rules, plugins, hooks, and MCP servers.": "Antigravity のカスタマイズの仕組みに関する総合ガイドとリファレンスです。カスタマイズの動作、読み込みの優先順位、検出の仕組みの説明や、スキル、ルール、プラグイン、フック、MCP サーバーの作成ガイドに使います。",
+  "Discover UI plugin panels relevant to the current task and surface a one-click pill in chat to open (toggle) them in the side pane. Use when a running UI plugin's panel would help with what the user is doing, or right after the user enables a new UI plugin pane and a shortcut to open it is handy.": "現在のタスクに関係する UI プラグインのパネルを見つけ、サイドペインで開く（切り替える）ためのワンクリックのボタンをチャットに表示します。実行中の UI プラグインのパネルがユーザーの作業に役立つときや、ユーザーが新しい UI プラグインのペインを有効にした直後で、開くためのショートカットがあると便利なときに使います。",
+  "Guidelines for interacting with GitHub and request permissions from the user when commands fail due to restrictions in the agent environment.": "GitHub を操作するためのガイドラインです。エージェント環境の制限でコマンドが失敗したときは、ユーザーに権限をリクエストします。",
+  "half a minute": "30 秒",
+  "How to manage and create plugins — namespaced bundles of skills, agents, rules, MCP servers and hooks that install, enable and disable as a single unit. Use this skill when the user wants to enable, disable, install or uninstall a plugin, when they want to create a new plugin, or when a new customization should be packaged into a plugin rather than left loose. Also triggered by the /plugin slash command. Don't use for the underlying customization system itself — discovery roots, loading priority, or authoring a standalone skill, agent, rule, hook or MCP server outside a plugin; see the customizations guide skill for those.": "プラグインの管理と作成の方法です。プラグインとは、スキル、エージェント、ルール、MCP サーバー、フックを名前空間付きでまとめたもので、1 つの単位としてインストール・有効化・無効化されます。ユーザーがプラグインを有効化・無効化・インストール・アンインストールしたいとき、新しいプラグインを作成したいとき、新しいカスタマイズをばらばらに置かずにプラグインにまとめるべきときに、このスキルを使います。/plugin スラッシュ コマンドでも起動します。カスタマイズの仕組みそのもの（検出ルート、読み込みの優先順位、プラグイン外でのスキル、エージェント、ルール、フック、MCP サーバーの単独作成）には使わず、カスタマイズ ガイドのスキルを参照してください。",
+  "How to render rich interactive HTML widgets inline in the chat or as standalone artifacts. Use this skill when you want to show the user diagrams, data visualizations, interactive controls, educational walkthroughs, or any rich visual content beyond plain text and markdown.": "リッチでインタラクティブな HTML ウィジェットを、チャット内に埋め込んで、または独立したアーティファクトとして描画する方法です。図、データの可視化、インタラクティブな操作部品、学習用のウォークスルーなど、プレーンテキストや Markdown を超えるリッチな視覚コンテンツをユーザーに見せたいときに、このスキルを使います。",
+  "How to write and run a dynamic workflow script with the `run_workflow` tool: a Python script that orchestrates many agents with `agent`, `parallel`, `pipeline`, and `phase`. Use when a task splits into many independent or staged pieces of agent work (fan out over files, modules, bugs, or review angles, then aggregate), or when the user asks for a workflow. Don't use for a single delegated task (use a subagent) or for legacy workflow files (see migrate-workflows).": "`run_workflow` ツールで動的なワークフロー スクリプトを作成・実行する方法です。`agent`、`parallel`、`pipeline`、`phase` で多数のエージェントを統括する Python スクリプトを使います。タスクが多数の独立した、または段階的なエージェントの作業に分かれるとき（ファイル、モジュール、バグ、レビューの観点ごとに分担してから集約するなど）や、ユーザーがワークフローを求めたときに使います。単一の委任タスク（サブエージェントを使用）や従来のワークフロー ファイル（migrate-workflows を参照）には使いません。",
+  "Interactive guide to design and create a scheduled background automation. Use this skill when the user wants to create an automated or recurring scheduled task (e.g. \"summarize my emails every morning\", \"every Monday send me a to-do list\"). Also triggered by the /automation slash command.": "スケジュールで実行するバックグラウンドの自動化を設計・作成するための対話式ガイドです。自動または定期的なスケジュール タスクを作成したいとき（例：「毎朝メールを要約して」「毎週月曜に ToDo リストを送って」）に、このスキルを使います。/automation スラッシュ コマンドでも起動します。",
+  "less than a minute": "1 分未満",
+  "less than a second": "1 秒未満",
+  "Privacy Policy": "プライバシー ポリシー",
+  "Provides a comprehensive guide, quick reference, and sitemap for Google Antigravity (AGY), including the Antigravity CLI (agy), Antigravity 2.0, Antigravity IDE, Python SDK, slash commands, keybindings, and customizations (skills, rules, MCP, sidecars). Activate this skill when the user asks questions about how to use, configure, or customize Antigravity, AGY, the agy CLI, the Antigravity IDE, or Antigravity 2.0.": "Google Antigravity（AGY）の総合ガイド、クイック リファレンス、サイトマップを提供します。Antigravity CLI（agy）、Antigravity 2.0、Antigravity IDE、Python SDK、スラッシュ コマンド、キーバインド、カスタマイズ（スキル、ルール、MCP、Sidecar）を扱います。Antigravity、AGY、agy CLI、Antigravity IDE、Antigravity 2.0 の使い方、設定、カスタマイズについてユーザーが質問したときに、このスキルを有効にします。",
+  "Terms of Service": "利用規約"
+ },
+ "patterns": {
+  "about {0} hours": "約 {0} 時間",
+  "about {0} months": "約 {0} か月",
+  "about {0} weeks": "約 {0} 週間",
+  "about {0} years": "約 {0} 年",
+  "almost {0} years": "{0} 年弱",
+  "less than {0} minutes": "{0} 分未満",
+  "less than {0} seconds": "{0} 秒未満",
+  "over {0} years": "{0} 年以上",
+  "Settings - {0}": "設定 - {0}",
+  "{0} ago": "{0}前",
+  "{0} days": "{0} 日",
+  "{0} hours": "{0} 時間",
+  "{0} minutes": "{0} 分",
+  "{0} months": "{0} か月",
+  "{0} weeks": "{0} 週間",
+  "{0} years": "{0} 年",
+  "{0}d {1}h {2}m": "{0} 日 {1} 時間 {2} 分",
+  "{0}h {1}m": "{0} 時間 {1} 分",
+  "{0}m {1}s": "{0} 分 {1} 秒"
+ },
+ "sentences": {
+  "Also includes Global Permissions when working {0}.": {
+   "Also includes": "さらに",
+   "when working": "も適用されます。対象：",
+   ".": "。"
+  },
+  "Also includes Global Permissions when working {0}. {1}": {
+   "Also includes": "さらに",
+   "when working": "も適用されます。対象：",
+   ".": "。"
+  },
+  "Are you sure you want to delete the {0} {1}?": {
+   "Are you sure you want to delete the": "",
+   "?": "を削除してもよろしいですか？"
+  },
+  "Are you sure you want to delete {0}?": {
+   "Are you sure you want to delete": "",
+   "?": "を削除してもよろしいですか？"
+  }
+ }
+}

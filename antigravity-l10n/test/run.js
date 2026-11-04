@@ -104,7 +104,7 @@ test('patch：生成汉化版并通过自检', () => {
   const mainLines = asar.readFile(arc, 'dist/main.js').toString().split('\n');
   assert.strictEqual(mainLines[0], '"use strict";');
   assert.ok(mainLines[1].includes("require('./agzh/main-hook.js')"));
-  for (const f of ['dist/agzh/translator.js', 'dist/agzh/main-hook.js', 'dist/agzh/zh-CN.json']) {
+  for (const f of ['dist/agzh/translator.js', 'dist/agzh/main-hook.js', 'dist/agzh/locale.json']) {
     assert.ok(asar.getNode(arc, f), `缺少 ${f}`);
   }
   // 预加载脚本在没有 document 的环境里应安静退出，不抛错
@@ -115,12 +115,14 @@ test('patch：生成汉化版并通过自检', () => {
 
 test('patch：拒绝已汉化的包、其他程序、被别的汉化工具改过的包', () => {
   const { buf } = patch.buildPatched(fs.readFileSync(FIXTURE));
-  assert.throws(() => patch.buildPatched(buf), /已经是汉化版/);
+  assert.throws(() => patch.buildPatched(buf), (e) => e.code === 'ALREADY_PATCHED');
   const arc = asar.parse(fs.readFileSync(FIXTURE));
   const other = withFile(arc, 'package.json', '{"name":"other-app","main":"dist/main.js"}');
-  assert.throws(() => patch.buildPatched(other), /不是 Antigravity/);
+  assert.throws(() => patch.buildPatched(other), (e) => e.code === 'NOT_ANTIGRAVITY');
   const foreign = withFile(arc, 'dist/preload.js', '"use strict";\nconst DICT = {"Settings": "设置"};\n');
-  assert.throws(() => patch.buildPatched(foreign), /其他汉化工具/);
+  assert.throws(() => patch.buildPatched(foreign), (e) => e.code === 'FOREIGN_PATCH');
+  const foreignJa = withFile(arc, 'dist/preload.js', '"use strict";\nconst DICT = {"Settings": "せってい"};\n');
+  assert.throws(() => patch.buildPatched(foreignJa), (e) => e.code === 'FOREIGN_PATCH');
 });
 
 // ---------------- cli ----------------
@@ -175,7 +177,7 @@ test('cli：遇到被别的工具改过的包时不动任何文件', () => {
   const res = path.join(dir, 'resources');
   const r = cli(['apply', '--dir', dir]);
   assert.strictEqual(r.code, 1);
-  assert.match(r.out, /其他汉化工具/);
+  assert.match(r.out, /其他汉化/);
   assert.ok(fs.readFileSync(path.join(res, 'app.asar')).equals(foreign));
   assert.ok(!fs.existsSync(path.join(res, 'app.asar.agzh-original')));
 });
@@ -258,8 +260,8 @@ test('翻译：整句片段规则与仅精确匹配', () => {
 });
 
 // ---------------- 词典 ----------------
-test('词典：格式检查', () => {
-  const dir = path.join(ROOT, 'locales', 'zh-CN');
+for (const LOC of ['zh-CN', 'ja']) test(`词典：格式检查（${LOC}）`, () => {
+  const dir = path.join(ROOT, 'locales', LOC);
   const seen = new Map();
   let total = 0;
   for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json')).sort()) {
@@ -297,9 +299,50 @@ test('词典：格式检查', () => {
     }
   }
   assert.ok(total > 3000, `词条太少：${total}`);
-  const merged = loadAllLocales();
+  const merged = patch.loadLocale(LOC);
   const t = createTranslator(merged);
   assert.ok(t.size > 3000);
+});
+
+test('词典：中日两种语言收录的英文原文一致', () => {
+  const zh = patch.loadLocale('zh-CN');
+  const ja = patch.loadLocale('ja');
+  for (const k of ['text', 'patterns', 'sentences']) {
+    const a = Object.keys(zh[k]).sort();
+    const b = Object.keys(ja[k]).sort();
+    const onlyZh = a.filter((x) => !(x in ja[k]));
+    const onlyJa = b.filter((x) => !(x in zh[k]));
+    assert.deepStrictEqual([onlyZh.slice(0, 5), onlyJa.slice(0, 5)], [[], []], `${k} 不一致`);
+  }
+  assert.strictEqual(zh.lang, 'zh-CN');
+  assert.strictEqual(ja.lang, 'ja');
+});
+
+test('cli：日语汉化 → 切换到中文 → 还原；日语输出', () => {
+  const dir = makeInstall();
+  const res = path.join(dir, 'resources');
+  const original = fs.readFileSync(FIXTURE);
+  let r = cli(['apply', '--locale', 'ja', '--dir', dir]);
+  assert.strictEqual(r.code, 0, r.out);
+  assert.match(r.out, /公式版 9\.9\.9 を検出しました/);
+  let meta = patch.readMeta(asar.parse(fs.readFileSync(path.join(res, 'app.asar'))));
+  assert.strictEqual(meta.locale, 'ja');
+  const arc = asar.parse(fs.readFileSync(path.join(res, 'app.asar')));
+  assert.strictEqual(JSON.parse(asar.readFile(arc, 'dist/agzh/locale.json').toString()).lang, 'ja');
+  r = cli(['status', '--locale', 'ja', '--dir', dir]);
+  assert.match(r.out, /日本語化パッチ適用済み/);
+  r = cli(['apply', '--locale', 'zh-CN', '--dir', dir]);
+  assert.strictEqual(r.code, 0, r.out);
+  assert.match(r.out, /当前已应用日语界面/);
+  meta = patch.readMeta(asar.parse(fs.readFileSync(path.join(res, 'app.asar'))));
+  assert.strictEqual(meta.locale, 'zh-CN');
+  assert.ok(fs.readFileSync(path.join(res, 'app.asar.agzh-original')).equals(original));
+  r = cli(['restore', '--locale', 'ja', '--dir', dir]);
+  assert.strictEqual(r.code, 0, r.out);
+  assert.match(r.out, /公式の英語版 9\.9\.9 に戻しました/);
+  assert.ok(fs.readFileSync(path.join(res, 'app.asar')).equals(original));
+  r = cli(['apply', '--locale', 'xx', '--dir', dir]);
+  assert.strictEqual(r.code, 1);
 });
 
 // ---------------- main-hook ----------------
@@ -307,7 +350,7 @@ test('主进程钩子：菜单、托盘、对话框、通知', () => {
   const dir = tmpdir();
   fs.copyFileSync(path.join(ROOT, 'src/runtime/main-hook.js'), path.join(dir, 'main-hook.js'));
   fs.copyFileSync(path.join(ROOT, 'src/runtime/translator.js'), path.join(dir, 'translator.js'));
-  fs.writeFileSync(path.join(dir, 'zh-CN.json'), JSON.stringify(loadAllLocales()));
+  fs.writeFileSync(path.join(dir, 'locale.json'), JSON.stringify(loadAllLocales()));
 
   const calls = {};
   class Tray { setContextMenu(m) { calls.tray = m.items.map((i) => i.label); } }
@@ -390,6 +433,23 @@ if (playwright) {
       assert.strictEqual(await get('#b'), '重试');
       assert.strictEqual(await get('#new'), '设置');
       assert.strictEqual(await page.$eval('#i', (el) => el.getAttribute('placeholder')), '搜索文件…');
+
+      // 日语版
+      const ja = patch.buildPatched(fs.readFileSync(FIXTURE), { locale: 'ja' });
+      const jaPreload = asar.readFile(asar.parse(ja.buf), 'dist/preload.js').toString();
+      const page2 = await browser.newPage();
+      await page2.setContent(`<html lang="en"><body>
+        <button id="b">Cancel</button>
+        <p id="mix">Type <kbd>/</kbd> and select <code>plan</code> to have the agent generate a plan.</p>
+        <span id="cnt">3 agents running</span><span id="del">Delete Project</span>
+      </body></html>`);
+      await page2.evaluate(jaPreload.slice(jaPreload.indexOf(patch.MARK_BEGIN)));
+      const get2 = (sel) => page2.$eval(sel, (el) => el.textContent);
+      assert.strictEqual(await page2.$eval('html', (el) => el.lang), 'ja');
+      assert.strictEqual(await get2('#b'), 'キャンセル');
+      assert.strictEqual(await get2('#mix'), '/を入力してplanを選択すると、エージェントが計画を作成します。');
+      assert.strictEqual(await get2('#cnt'), 'エージェント 3 件が実行中');
+      assert.strictEqual(await get2('#del'), 'プロジェクトを削除');
     } finally {
       await browser.close();
     }

@@ -4,7 +4,8 @@
  *
  *   cd tools && npm install            # 第一次需要：装 acorn 解析器
  *   node tools/extract-webui.js "<安装目录>\\resources\\bin\\language_server.exe" webui
- *   node tools/find-untranslated.js webui/main.js untranslated.json
+ *   node tools/find-untranslated.js webui/main.js untranslated.json        # 简体中文
+ *   node tools/find-untranslated.js webui/main.js untranslated-ja.json ja  # 日语
  *
  * 做法：解析 main.js 里所有字符串/模板字符串，按语法位置分类（JSX 子节点、label/title 等属性、
  * 返回值……），过滤掉 CSS 类名、标识符、日志等，再和 locales/zh-CN 里的词条对比。
@@ -17,9 +18,9 @@ const walk = require(path.join(__dirname, 'node_modules', 'acorn-walk'));
 const { loadLocale } = require('../src/patch');
 const { createTranslator } = require('../src/runtime/translator');
 
-const [, , inFile, outFile] = process.argv;
+const [, , inFile, outFile, locale = 'zh-CN'] = process.argv;
 if (!inFile || !outFile) {
-  console.log('用法：node tools/find-untranslated.js <main.js> <输出.json>');
+  console.log('用法：node tools/find-untranslated.js <main.js> <输出.json> [zh-CN|ja]');
   process.exit(2);
 }
 const src = fs.readFileSync(inFile, 'utf8');
@@ -174,7 +175,7 @@ function tier(ctx) {
   return 'B';
 }
 
-const tr = createTranslator(loadLocale('zh-CN'));
+const tr = createTranslator(loadLocale(locale));
 const rows = [];
 for (const e of found.values()) {
   if (!looksUI(e.s, e.kind)) continue;

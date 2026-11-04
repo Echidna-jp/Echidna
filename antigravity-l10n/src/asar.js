@@ -11,21 +11,22 @@
  */
 
 const crypto = require('crypto');
+const { AgzhError } = require('./messages');
 
 const BLOCK_SIZE = 4 * 1024 * 1024;
 
 function parse(buf) {
-  if (!Buffer.isBuffer(buf) || buf.length < 16) throw new Error('不是有效的 asar 文件（太短）');
-  if (buf.readUInt32LE(0) !== 4) throw new Error('不是有效的 asar 文件（文件头不对）');
+  if (!Buffer.isBuffer(buf) || buf.length < 16) throw new AgzhError('ASAR_INVALID', 'too short');
+  if (buf.readUInt32LE(0) !== 4) throw new AgzhError('ASAR_INVALID', 'bad header');
   const headerBufSize = buf.readUInt32LE(4);
   const payloadSize = buf.readUInt32LE(8);
   const jsonLen = buf.readInt32LE(12);
   if (8 + headerBufSize > buf.length || jsonLen <= 0 || jsonLen > payloadSize) {
-    throw new Error('不是有效的 asar 文件（头部长度异常）');
+    throw new AgzhError('ASAR_INVALID', 'bad header size');
   }
   const headerString = buf.toString('utf8', 16, 16 + jsonLen);
   const header = JSON.parse(headerString);
-  if (!header || typeof header.files !== 'object') throw new Error('asar 头部缺少 files');
+  if (!header || typeof header.files !== 'object') throw new AgzhError('ASAR_INVALID', 'no files');
   return { buf, header, headerString, dataOffset: 8 + headerBufSize };
 }
 
@@ -44,8 +45,8 @@ function getNode(archive, p) {
 
 function readFile(archive, p) {
   const node = getNode(archive, p);
-  if (!node || node.files || node.link) throw new Error(`asar 内没有文件：${p}`);
-  if (node.unpacked) throw new Error(`文件在 app.asar.unpacked 里，不在包内：${p}`);
+  if (!node || node.files || node.link) throw new Error(`asar: no such file: ${p}`);
+  if (node.unpacked) throw new Error(`asar: file is stored in app.asar.unpacked: ${p}`);
   const start = archive.dataOffset + Number(node.offset);
   return archive.buf.subarray(start, start + node.size);
 }
@@ -90,11 +91,11 @@ function rebuild(archive, changes) {
     for (let i = 0; i < parts.length - 1; i++) {
       if (!node.files[parts[i]]) node.files[parts[i]] = { files: {} };
       node = node.files[parts[i]];
-      if (!node.files) throw new Error(`路径冲突：${p}`);
+      if (!node.files) throw new Error(`asar: path conflict: ${p}`);
     }
     const leaf = parts[parts.length - 1];
     const old = node.files[leaf];
-    if (old && (old.files || old.link || old.unpacked)) throw new Error(`不能替换这个节点：${p}`);
+    if (old && (old.files || old.link || old.unpacked)) throw new Error(`asar: cannot replace node: ${p}`);
     node.files[leaf] = { size: data.length, offset: '0', integrity: integrityOf(data) };
     if (old && old.executable) node.files[leaf].executable = true;
   }

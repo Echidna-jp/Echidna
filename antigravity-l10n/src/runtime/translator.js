@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Antigravity 中文界面 · 翻译核心
+ * Antigravity 本地化（简体中文 / 日语）· 翻译核心
  *
  * 渲染进程（preload）和主进程（main-hook）共用这一份逻辑。
  * 只做“整句精确匹配”：一段文字要么整段命中词典，要么原样保留，
@@ -273,7 +273,7 @@ function norm(s) {
   return String(s).replace(/\s+/g, ' ').trim();
 }
 
-const CJK = /[\u3400-\u4dbf\u4e00-\u9fff]/;
+const CJK = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/; // 汉字 + 平假名/片假名
 const NUMERIC = /^[\d\s.,:%+\-/]*$/;
 const LATIN = /[A-Za-z0-9]/;
 function needsSpace(a, b) {

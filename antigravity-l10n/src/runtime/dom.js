@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Antigravity 中文界面 · 页面翻译
+ * Antigravity 本地化（简体中文 / 日语）· 页面翻译
  *
  * 在 preload（隔离世界）里运行：DOM 是和页面共享的，所以可以直接改文字，
  * 但页面脚本碰不到这里的变量。
@@ -169,10 +169,12 @@ function startDomTranslator(tr, opts) {
     }
   }
 
+  const LANG = (opts && opts.lang) || 'zh-CN';
   function setLang() {
     const html = doc.documentElement;
-    // 让 Chromium 按简体中文挑选字形（日文系统上默认会用日文字体显示汉字）
-    if (html && html.getAttribute('lang') !== 'zh-CN') html.setAttribute('lang', 'zh-CN');
+    // 让 Chromium 按界面语言挑选汉字字形：zh-CN 用简体中文字体，ja 用日文字体
+    // （否则中文系统上的日文、日文系统上的中文都会套用另一种字形）
+    if (html && html.getAttribute('lang') !== LANG) html.setAttribute('lang', LANG);
   }
 
   function start() {

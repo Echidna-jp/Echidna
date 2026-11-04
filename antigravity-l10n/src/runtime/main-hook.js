@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Antigravity 中文界面 · 主进程钩子
+ * Antigravity 本地化（简体中文 / 日语）· 主进程钩子
  *
  * 由补丁加在 dist/main.js 的第一行（require('./agzh/main-hook.js')），
  * 在官方代码运行之前，给几个会显示文字的 Electron 接口套一层翻译：
@@ -24,7 +24,7 @@ function log(...args) {
 let tr = null;
 try {
   const { createTranslator } = require('./translator.js');
-  const data = require('./zh-CN.json');
+  const data = require('./locale.json');
   tr = createTranslator(data);
 } catch (e) {
   log('词典加载失败，主进程不翻译：', e && e.message);

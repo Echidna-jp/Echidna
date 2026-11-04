@@ -1,6 +1,6 @@
 'use strict';
 /*
- * 由官方原版 app.asar 生成汉化版：
+ * 由官方原版 app.asar 生成本地化版（简体中文 / 日语）：
  *   dist/preload.js                 末尾追加：翻译核心 + 页面翻译 + 词典（沙盒 preload 不能 require 其他文件，只能内联）
  *   dist/ideInstall/wizardPreload.js 同上（从旧版 IDE 迁移时的欢迎向导）
  *   dist/main.js                    第一行插入 require('./agzh/main-hook.js')
@@ -13,11 +13,13 @@ const path = require('path');
 const crypto = require('crypto');
 const vm = require('vm');
 const asar = require('./asar');
+const { LOCALES, AgzhError } = require('./messages');
 
 const ROOT = path.join(__dirname, '..');
 const META_PATH = 'dist/agzh/meta.json';
-const MARK_BEGIN = '/* ==== agzh: Antigravity 中文界面 BEGIN ==== */';
-const MARK_END = '/* ==== agzh: Antigravity 中文界面 END ==== */';
+const MARK_BEGIN = '/* ==== agzh: Antigravity localization BEGIN ==== */';
+const MARK_END = '/* ==== agzh: Antigravity localization END ==== */';
+const DEFAULT_LOCALE = 'zh-CN';
 const MAIN_LINE = "try { require('./agzh/main-hook.js'); } catch (e) { console.error('[agzh] main-hook', e); } /* agzh */";
 
 function sha256(buf) {
@@ -40,20 +42,22 @@ function toolVersion() {
  * 读取词典：locales/<locale>/ 下的所有 .json 按文件名顺序合并（后面的覆盖前面的）。
  * 每个文件的结构都是 { text, patterns, sentences }，只保留运行时需要的这三部分。
  */
-function loadLocale(locale = 'zh-CN') {
+function loadLocale(locale = DEFAULT_LOCALE) {
+  if (!LOCALES[locale]) throw new AgzhError('UNKNOWN_LOCALE', locale);
   const dir = path.join(ROOT, 'locales', locale);
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
-  if (!files.length) throw new Error(`词典目录是空的：${dir}`);
+  const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort() : [];
+  if (!files.length) throw new AgzhError('LOCALE_EMPTY', dir);
   const merged = { text: {}, patterns: {}, sentences: {} };
   for (const f of files) {
     let data;
     try {
       data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
     } catch (e) {
-      throw new Error(`词典文件 ${f} 不是有效的 JSON：${e.message}`);
+      throw new AgzhError('LOCALE_JSON', f, e.message);
     }
     for (const k of ['text', 'patterns', 'sentences']) Object.assign(merged[k], data[k] || {});
   }
+  merged.lang = LOCALES[locale].lang;
   return merged;
 }
 
@@ -62,7 +66,7 @@ function stripModuleExports(src) {
   return src.replace(/\nif \(typeof module !== 'undefined' && module\.exports\) \{[\s\S]*?\n\}\s*$/, '\n');
 }
 
-function rendererBundle(data, version) {
+function rendererBundle(data, version, lang) {
   const translator = stripModuleExports(readText('src/runtime/translator.js')).replace(/^'use strict';\s*/, '');
   const dom = stripModuleExports(readText('src/runtime/dom.js')).replace(/^'use strict';\s*/, '');
   return [
@@ -76,7 +80,7 @@ function rendererBundle(data, version) {
     '    globalThis.__agzhRendererInstalled = true;',
     translator,
     dom,
-    '    startDomTranslator(createTranslator(DATA), { version: VERSION });',
+    '    startDomTranslator(createTranslator(DATA), { version: VERSION, lang: DATA.lang });',
     '  } catch (e) {',
     "    try { console.warn('[agzh] renderer', e); } catch (_) {}",
     '  }',
@@ -107,19 +111,19 @@ function appPackage(archive) {
 /** 确认这是 Antigravity 2.x 桌面应用的 app.asar（而不是旧版 IDE 或别的 Electron 程序） */
 function checkTarget(archive) {
   const pkg = appPackage(archive);
-  if (!pkg) throw new Error('app.asar 里没有 package.json');
+  if (!pkg) throw new AgzhError('NO_PACKAGE');
   if (pkg.name !== 'antigravity' || pkg.main !== 'dist/main.js') {
-    throw new Error(`这不是 Antigravity 2.x 桌面应用（name=${pkg.name}, main=${pkg.main}）`);
+    throw new AgzhError('NOT_ANTIGRAVITY', pkg.name, pkg.main);
   }
   for (const f of ['dist/main.js', 'dist/preload.js']) {
-    if (!asar.getNode(archive, f)) throw new Error(`app.asar 里缺少 ${f}，可能是不支持的版本`);
+    if (!asar.getNode(archive, f)) throw new AgzhError('MISSING_FILE', f);
   }
-  // 官方 dist/*.js 里没有一个汉字；有汉字说明被别的汉化工具改过，
+  // 官方 dist/*.js 里没有一个汉字或假名；有的话说明被别的汉化/日语化工具改过，
   // 这时如果当成“原版”备份，以后就还原不回真正的原版了。
   for (const f of ['dist/main.js', 'dist/preload.js', 'dist/menu.js', 'dist/tray.js', 'dist/updater.js']) {
     if (!asar.getNode(archive, f)) continue;
-    if (/[\u4e00-\u9fff]/.test(asar.readFile(archive, f).toString('utf8'))) {
-      throw new Error('这个 app.asar 已经被其他汉化工具改过（不是官方原版）。请先重新安装官方 Antigravity，再运行本工具。');
+    if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(asar.readFile(archive, f).toString('utf8'))) {
+      throw new AgzhError('FOREIGN_PATCH');
     }
   }
   return pkg;
@@ -130,7 +134,7 @@ function checkSyntax(name, code) {
     // 只编译不运行；CommonJS 文件包一层函数以允许顶层 return
     new vm.Script(`(function (exports, require, module, __filename, __dirname) {\n${code}\n})`, { filename: name });
   } catch (e) {
-    throw new Error(`生成的 ${name} 语法检查没通过：${e.message}`);
+    throw new AgzhError('SYNTAX', name, e.message);
   }
 }
 
@@ -140,15 +144,16 @@ function checkSyntax(name, code) {
  */
 function buildPatched(originalBuf, opts = {}) {
   const archive = asar.parse(originalBuf);
-  if (readMeta(archive)) throw new Error('传入的 app.asar 已经是汉化版，需要官方原版');
+  if (readMeta(archive)) throw new AgzhError('ALREADY_PATCHED');
   const pkg = checkTarget(archive);
-  const data = opts.data || loadLocale(opts.locale);
+  const locale = opts.locale || DEFAULT_LOCALE;
+  const data = opts.data || loadLocale(locale);
   const version = toolVersion();
 
   const changes = new Map();
 
   const preload = asar.readFile(archive, 'dist/preload.js').toString('utf8');
-  const bundle = rendererBundle(data, version);
+  const bundle = rendererBundle(data, version, data.lang);
   changes.set('dist/preload.js', Buffer.from(preload + bundle, 'utf8'));
 
   if (asar.getNode(archive, 'dist/ideInstall/wizardPreload.js')) {
@@ -164,11 +169,12 @@ function buildPatched(originalBuf, opts = {}) {
 
   changes.set('dist/agzh/translator.js', Buffer.from(readText('src/runtime/translator.js'), 'utf8'));
   changes.set('dist/agzh/main-hook.js', Buffer.from(readText('src/runtime/main-hook.js'), 'utf8'));
-  changes.set('dist/agzh/zh-CN.json', Buffer.from(JSON.stringify(data), 'utf8'));
+  changes.set('dist/agzh/locale.json', Buffer.from(JSON.stringify(data), 'utf8'));
 
   const meta = {
-    tool: 'antigravity-zh',
+    tool: 'antigravity-l10n',
     toolVersion: version,
+    locale,
     appVersion: pkg.version,
     originalSha256: sha256(originalBuf),
     originalSize: originalBuf.length,
@@ -187,17 +193,17 @@ function buildPatched(originalBuf, opts = {}) {
   // 回读校验：新包能解析，改动的文件内容一致，未改动的文件逐字节相同
   const check = asar.parse(out);
   for (const [p, buf] of changes) {
-    if (!asar.readFile(check, p).equals(buf)) throw new Error(`回读校验失败：${p}`);
+    if (!asar.readFile(check, p).equals(buf)) throw new AgzhError('VERIFY', p);
   }
   for (const p of asar.listFiles(archive)) {
     const node = asar.getNode(archive, p);
     if (node.unpacked || node.link || changes.has(p)) continue;
-    if (!asar.readFile(check, p).equals(asar.readFile(archive, p))) throw new Error(`回读校验失败：${p}`);
+    if (!asar.readFile(check, p).equals(asar.readFile(archive, p))) throw new AgzhError('VERIFY', p);
   }
   return { buf: out, meta };
 }
 
 module.exports = {
   buildPatched, readMeta, appPackage, checkTarget, sha256, loadLocale, toolVersion,
-  META_PATH, MARK_BEGIN, MARK_END,
+  META_PATH, MARK_BEGIN, MARK_END, DEFAULT_LOCALE,
 };

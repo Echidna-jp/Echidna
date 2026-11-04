@@ -1,12 +1,13 @@
 'use strict';
 /*
- * Antigravity 中文界面 · 命令行
+ * Antigravity 本地化（简体中文 / 日语）· 命令行
  *
- *   apply    汉化（必要时先备份官方原版）
+ *   apply    应用界面翻译（必要时先备份官方原版；已应用其他语言时直接切换）
  *   restore  还原官方英文原版
  *   status   查看当前状态
  *
  * 选项：
+ *   --locale <zh-CN|ja> 界面语言，同时决定本程序输出用的语言。默认 zh-CN
  *   --dir <安装目录>   Antigravity 安装目录（含 resources 文件夹）。不给的话自动查找
  *   --log <文件>       把输出写进这个文件（UTF-8），不打印到控制台
  *   --dry-run          只生成并校验，不写入安装目录
@@ -24,6 +25,7 @@ const path = require('path');
 const os = require('os');
 const patch = require('./patch');
 const asar = require('./asar');
+const { AgzhError, LOCALES, messages } = require('./messages');
 
 const BACKUP_NAME = 'app.asar.agzh-original';
 
@@ -46,6 +48,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dir') args.dir = argv[++i];
+    else if (a === '--locale') args.locale = argv[++i];
     else if (a === '--log') args.log = argv[++i];
     else if (a === '--dry-run') args.dryRun = true;
     else if (a === '--help' || a === '-h') args.help = true;
@@ -86,14 +89,14 @@ function candidates() {
 function findResources(dir) {
   if (dir) {
     const r = resourcesDirOf(dir) || (fs.existsSync(path.join(dir, 'app.asar')) ? dir : null);
-    if (!r) throw new Error(`在 ${dir} 下没找到 resources\\app.asar`);
+    if (!r) throw new AgzhError('DIR_NO_ASAR', dir);
     return r;
   }
   for (const c of candidates()) {
     const r = resourcesDirOf(c);
     if (r) return r;
   }
-  throw new Error('没找到 Antigravity 的安装目录，请用 --dir 指定（含 resources 文件夹的那一层）');
+  throw new AgzhError('NO_INSTALL');
 }
 
 // ---------- 文件操作 ----------
@@ -103,14 +106,14 @@ function writeAtomic(target, buf) {
   const back = fs.readFileSync(tmp);
   if (!back.equals(buf)) {
     try { fs.unlinkSync(tmp); } catch (_) { /* ignore */ }
-    throw new Error(`写入 ${path.basename(target)} 后回读不一致，已放弃`);
+    throw new AgzhError('WRITE_VERIFY', path.basename(target));
   }
   try {
     fs.renameSync(tmp, target);
   } catch (e) {
     try { fs.unlinkSync(tmp); } catch (_) { /* ignore */ }
     if (e && (e.code === 'EBUSY' || e.code === 'EPERM' || e.code === 'EACCES')) {
-      throw new Error(`${path.basename(target)} 正被占用或没有写权限。请先完全退出 Antigravity（包括托盘图标）再试。`);
+      throw new AgzhError('LOCKED', path.basename(target));
     }
     throw e;
   }
@@ -143,57 +146,55 @@ function inspect(resDir) {
 }
 
 // ---------- 命令 ----------
+let T = messages(patch.DEFAULT_LOCALE);
+
 function cmdStatus(resDir) {
   const st = inspect(resDir);
-  out(`安装目录：${path.dirname(resDir)}`);
+  out(T.t('installDir', path.dirname(resDir)));
   if (!st.exists) {
-    out('状态：找不到 app.asar');
+    out(T.t('statusNoAsar'));
     return 1;
   }
-  out(`Antigravity 版本：${st.pkg ? st.pkg.version : '未知'}`);
+  out(T.t('appVersion', st.pkg ? st.pkg.version : T.t('unknown')));
   if (st.meta) {
-    out(`状态：已汉化（工具 ${st.meta.toolVersion}，词条 ${st.meta.entries} 条，${st.meta.patchedAt}）`);
+    out(T.t('statusPatched', T.localeName(st.meta.locale || 'zh-CN'), st.meta.toolVersion, st.meta.entries, st.meta.patchedAt));
   } else {
-    out('状态：官方英文原版');
+    out(T.t('statusOfficial'));
   }
   if (st.backup) {
-    out(`原版备份：${BACKUP_NAME}（${st.backup.pkg ? st.backup.pkg.version : '未知版本'}）`);
+    out(T.t('backup', BACKUP_NAME, st.backup.pkg ? st.backup.pkg.version : T.t('unknown')));
   } else {
-    out('原版备份：无');
+    out(T.t('backupNone'));
   }
-  out(`本工具：${patch.toolVersion()}`);
+  out(T.t('toolVersion', patch.toolVersion()));
   return 0;
 }
 
-function cmdApply(resDir, args) {
+function cmdApply(resDir, args, locale) {
   const st = inspect(resDir);
-  if (!st.exists) throw new Error(`找不到 ${st.asarPath}`);
+  if (!st.exists) throw new AgzhError('NO_ASAR', st.asarPath);
 
   let original;
   if (!st.meta) {
-    // 当前就是官方原版（首次汉化，或官方更新后变回英文）
+    // 当前就是官方原版（第一次应用，或官方更新后变回英文）
     patch.checkTarget(asar.parse(st.buf));
     original = st.buf;
-    out(`检测到官方原版 ${st.pkg.version}。`);
+    out(T.t('detectedOfficial', st.pkg.version));
   } else {
-    // 已经汉化过：用备份重新生成（比如词典更新了）
-    if (!st.backup || st.backup.patched) {
-      throw new Error('当前已是汉化版，但找不到可用的原版备份，无法重新生成。请先重新安装官方 Antigravity，再运行汉化。');
-    }
-    if (st.backup.sha256 !== st.meta.originalSha256) {
-      throw new Error('原版备份和当前汉化版对不上（可能被别的工具改过）。请重新安装官方 Antigravity，再运行汉化。');
-    }
+    // 已经应用过（同一种或另一种语言）：用备份重新生成
+    if (!st.backup || st.backup.patched) throw new AgzhError('NO_BACKUP_REGEN');
+    if (st.backup.sha256 !== st.meta.originalSha256) throw new AgzhError('BACKUP_MISMATCH');
     original = st.backup.buf;
-    out(`当前已是汉化版，用原版备份（${st.backup.pkg.version}）重新生成。`);
+    out(T.t('regenerate', T.localeName(st.meta.locale || 'zh-CN'), st.backup.pkg.version));
   }
 
-  const { buf, meta } = patch.buildPatched(original);
-  out(`已生成汉化版：${meta.entries} 条词条，校验通过。`);
+  const { buf, meta } = patch.buildPatched(original, { locale });
+  out(T.t('built', T.localeName(locale), meta.entries));
 
   if (args.dryRun) {
     const p = path.join(os.tmpdir(), 'app.asar.agzh-dryrun');
     fs.writeFileSync(p, buf);
-    out(`（--dry-run）结果写到了 ${p}，安装目录没有改动。`);
+    out(T.t('dryRun', p));
     return 0;
   }
 
@@ -201,51 +202,50 @@ function cmdApply(resDir, args) {
   const origSha = patch.sha256(original);
   if (!st.backup || st.backup.sha256 !== origSha) {
     writeAtomic(st.backupPath, original);
-    out(`已备份官方原版到 resources\\${BACKUP_NAME}`);
+    out(T.t('backedUp', BACKUP_NAME));
   }
   writeAtomic(st.asarPath, buf);
-  out('汉化完成。重新打开 Antigravity 即可看到中文界面。');
+  out(T.t('applied', T.localeName(locale)));
   return 0;
 }
 
 function cmdRestore(resDir, args) {
   const st = inspect(resDir);
   if (st.exists && !st.meta) {
-    out('当前已经是官方英文原版，不需要还原。');
+    out(T.t('alreadyOfficial'));
     if (st.backup && !args.dryRun) {
-      // 留着的备份如果和当前一致或更旧，就清掉
+      // 当前已是官方原版，留着的备份没用了
       fs.unlinkSync(st.backupPath);
-      out(`已删除多余的备份 ${BACKUP_NAME}。`);
+      out(T.t('removedBackup', BACKUP_NAME));
     }
     return 0;
   }
-  if (!st.backup || st.backup.patched || !st.backup.pkg) {
-    throw new Error('找不到可用的原版备份。可以直接重新安装官方 Antigravity 来恢复英文。');
-  }
-  if (st.meta && st.backup.sha256 !== st.meta.originalSha256) {
-    throw new Error('原版备份和当前汉化版对不上，为安全起见没有还原。可以直接重新安装官方 Antigravity。');
-  }
+  if (!st.backup || st.backup.patched || !st.backup.pkg) throw new AgzhError('NO_BACKUP_RESTORE');
+  if (st.meta && st.backup.sha256 !== st.meta.originalSha256) throw new AgzhError('RESTORE_MISMATCH');
   if (args.dryRun) {
-    out('（--dry-run）可以还原，安装目录没有改动。');
+    out(T.t('restoreDryRun'));
     return 0;
   }
   writeAtomic(st.asarPath, st.backup.buf);
   fs.unlinkSync(st.backupPath);
-  out(`已还原官方英文原版 ${st.backup.pkg.version}。`);
+  out(T.t('restored', st.backup.pkg.version));
   return 0;
 }
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.log) logFile = args.log;
+  const locale = args.locale || patch.DEFAULT_LOCALE;
+  T = messages(LOCALES[locale] ? locale : patch.DEFAULT_LOCALE);
+  if (!LOCALES[locale]) throw new AgzhError('UNKNOWN_LOCALE', locale);
   const cmd = args._[0] || 'status';
   if (args.help || !['apply', 'restore', 'status'].includes(cmd)) {
-    out('用法：cli.js <apply|restore|status> [--dir 安装目录] [--log 文件] [--dry-run]');
+    out(T.t('usage'));
     return args.help ? 0 : 2;
   }
   const resDir = findResources(args.dir);
   if (cmd === 'status') return cmdStatus(resDir);
-  if (cmd === 'apply') return cmdApply(resDir, args);
+  if (cmd === 'apply') return cmdApply(resDir, args, locale);
   return cmdRestore(resDir, args);
 }
 
@@ -253,7 +253,7 @@ let code = 1;
 try {
   code = main();
 } catch (e) {
-  out(`出错了：${e && e.message ? e.message : e}`);
+  out(T.t('error', T.error(e)));
   code = 1;
 }
 flush();

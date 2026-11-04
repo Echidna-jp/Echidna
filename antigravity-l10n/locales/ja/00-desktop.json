@@ -1,0 +1,49 @@
+{
+ "_comment": "デスクトップ外殻（Electron メインプロセス）の文字列：トレイメニュー、システムダイアログ、IDE 移行ウィザードなど。",
+ "text": {
+  "1 agent running": "エージェント 1 件が実行中",
+  "Antigravity IDE": "Antigravity IDE",
+  "Antigravity opened on Windows instead.": "代わりに Windows で Antigravity を開きました。",
+  "Are you sure you want to quit?": "終了してもよろしいですか？",
+  "Binary not found": "実行ファイルが見つかりません",
+  "Cancel": "キャンセル",
+  "Cannot open folder": "フォルダーを開けません",
+  "Check for Updates": "アップデートを確認",
+  "Checking for Updates...": "アップデートを確認しています…",
+  "Confirm Quit": "終了の確認",
+  "Connect to WSL": "WSL に接続",
+  "Docs": "ドキュメント",
+  "Download the Antigravity IDE": "Antigravity IDE をダウンロード",
+  "Downloading Update...": "アップデートをダウンロードしています…",
+  "Explore the new Antigravity": "新しい Antigravity を見てみる",
+  "Folder is on the Windows filesystem": "フォルダーは Windows のファイルシステム上にあります",
+  "New Window": "新しいウィンドウ",
+  "No agents running": "実行中のエージェントはありません",
+  "No updates available": "利用可能なアップデートはありません",
+  "OK": "OK",
+  "Open Antigravity": "Antigravity を開く",
+  "Quit": "終了",
+  "Reopen Locally": "ローカルで開き直す",
+  "Restart to Update": "再起動してアップデート",
+  "Select a passkey account to continue:": "続行するにはパスキーのアカウントを選択してください：",
+  "Setting up…": "セットアップしています…",
+  "Startup failed": "起動に失敗しました",
+  "There may be agents or background tasks running.": "実行中のエージェントやバックグラウンド タスクがある可能性があります。",
+  "Welcome to Antigravity": "Antigravity へようこそ",
+  "Welcome to the new Antigravity!": "新しい Antigravity へようこそ！",
+  "WSL setup failed": "WSL のセットアップに失敗しました"
+ },
+ "patterns": {
+  "Open {0}": "{0} を開く",
+  "Setting up WSL: {0}": "WSL をセットアップしています：{0}",
+  "Sign in to {0}": "{0} にログイン",
+  "The WSL distro \"{0}\" is no longer installed.": "WSL ディストリビューション「{0}」はインストールされていません。",
+  "{0} agents running": "エージェント {0} 件が実行中"
+ },
+ "sentences": {
+  "Antigravity has been redesigned to put agents first with new capabilities. If you'd still like a code editor, you can download it as a separate app named Antigravity IDE.": {
+   "Antigravity has been redesigned to put agents first with new capabilities. If you'd still like a code editor, you can download it as a separate app named": "Antigravity は、エージェントを中心とした新しい機能を備えて生まれ変わりました。コードエディタが必要な場合は、別のアプリとして提供されている",
+   ".": "をダウンロードできます。"
+  }
+ }
+}

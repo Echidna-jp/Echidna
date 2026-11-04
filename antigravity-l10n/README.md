@@ -1,6 +1,6 @@
-# Antigravity 中文界面
+# Antigravity 中文界面（附日语版）
 
-给 Google **Antigravity 2.x 桌面应用**加上简体中文界面，随时一键还原官方英文版。
+给 Google **Antigravity 2.x 桌面应用**加上简体中文界面，随时一键还原官方英文版。同一个工具也能装日语界面，日语说明见 [README.ja.md](README.ja.md)。
 
 | 官方英文版 | 汉化后 |
 | --- | --- |
@@ -11,12 +11,13 @@
 
 ![外观设置](docs/images/appearance-zh.png)
 ![登录页](docs/images/onboarding-zh.png)
+![日语版](docs/images/settings-ja.png)
 
 </details>
 
 ## 特点
 
-- **按真实界面文案翻译**：词条从 Antigravity 2.29.0 官方安装包里内嵌的界面程序中逐条提取，约 3,960 条（整段文字 3,292、带变量的句式 604、夹着按钮或代码的整句 64），术语统一，见 [术语表](docs/术语表.md)。
+- **按真实界面文案翻译**：词条从 Antigravity 2.29.0 官方安装包里内嵌的界面程序中逐条提取，约 3,960 条（整段文字 3,292、带变量的句式 604、夹着按钮或代码的整句 64），术语统一，见 [术语表](docs/术语表.md)。日语版收录同一批原文，另行翻译，见 [用語集](docs/用語集-ja.md)。
 - **只改一个文件**：`resources\app.asar`。改之前先备份官方原版，还原后与原版逐字节一致。
 - **不用装任何东西**：不需要 Node.js、Python。工具借用 Antigravity 自带的运行环境。
 - **不联网**：工具和补丁都不会下载或上传任何东西。所有代码都在这个文件夹里，可以逐行看。
@@ -25,18 +26,20 @@
 ## 使用方法（Windows）
 
 1. 下载这个仓库（GitHub 页面 **Code → Download ZIP**），解压到任意位置。
-2. 打开 `antigravity-zh` 文件夹，双击 **`汉化.bat`**。
+2. 打开 `antigravity-l10n` 文件夹，双击 **`汉化.bat`**。
    - 如果 Antigravity 正在运行，会提示先关掉它，输入 `Y` 确认（正在进行的对话会被中断）。
    - 完成后会问要不要立即打开 Antigravity。
 3. 想恢复英文：双击 **`还原英文.bat`**。
 4. 看看当前是什么状态：双击 **`查看状态.bat`**。
+
+想要日语界面就双击 `日本語化.bat`（对应的还原、查看状态是 `英語に戻す.bat`、`状態を確認.bat`，提示文字是日语）。中文和日语之间可以直接切换，不用先还原。
 
 如果 Windows 弹出“Windows 已保护你的电脑”（因为文件来自网络），点 **更多信息 → 仍要运行**；或者在解压前右键 ZIP → **属性** → 勾选 **解除锁定**。
 
 Antigravity 默认装在 `%LOCALAPPDATA%\Programs\antigravity`，工具会自动找到。装在别处的话，用 PowerShell 手动指定（`Antigravity.exe` 所在的文件夹）：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\agzh.ps1 -Command apply -InstallDir "D:\Apps\Antigravity"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\agzh.ps1 -Command apply -Locale zh-CN -InstallDir "D:\Apps\Antigravity"
 ```
 
 ## 官方更新以后
@@ -57,10 +60,10 @@ Antigravity 自动更新时会换掉 `app.asar`，界面就会变回英文。**�
 
 ## 测试情况
 
-- 词典、补丁和翻译脚本都在 **Antigravity 2.29.0 官方 Linux 版**上实际运行验证：打补丁后程序正常启动，登录页、设置页的每个分页都已检查，页面没有报错。
+- 词典、补丁和翻译脚本都在 **Antigravity 2.29.0 官方 Linux 版**上实际运行验证：打补丁后程序正常启动，登录页、设置页的每个分页、IDE 迁移向导、托盘菜单都已检查（中文、日语两种都看过），页面没有报错。
 - Windows 版 2.29.0 的 `app.asar` 和内嵌界面程序与 Linux 版**逐字节相同**（已比对官方安装包，SHA-256 与 winget 清单一致），所以补丁内容完全一样。
 - `汉化.bat` 调用的 PowerShell 脚本在 PowerShell 7 上跑通了“检测运行中的程序 → 关闭 → 汉化 → 还原”的完整流程；**还没有在真正的 Windows 机器上运行过**，第一次用时请留意提示。如果出错，`还原英文.bat` 或重新安装官方 Antigravity 都能恢复原状。
-- `npm test` 包含 15 项自动测试（asar 读写、补丁、备份与还原、词典格式、主进程钩子、在 Chromium 里跑页面翻译；最后一项需要装有 playwright，没有时自动跳过）。
+- `npm test` 包含 18 项自动测试（asar 读写、补丁、备份与还原、中日切换、词典格式与两种语言的原文是否一致、主进程钩子、在 Chromium 里跑页面翻译；最后一项需要装有 playwright，没有时自动跳过）。
 
 ## 原理
 
@@ -83,23 +86,25 @@ Antigravity 2.x 的界面是本地 `language_server` 提供的网页，由 Elect
 ## 文件说明
 
 ```
-汉化.bat / 还原英文.bat / 查看状态.bat   双击入口
+汉化.bat / 还原英文.bat / 查看状态.bat   双击入口（中文）
+日本語化.bat / 英語に戻す.bat / 状態を確認.bat   双击入口（日语）
 scripts/agzh.ps1                         找安装目录、关闭/重开 Antigravity、调用 cli.js
-src/cli.js                               apply / restore / status（不做任何交互）
+src/cli.js                               apply / restore / status（--locale zh-CN|ja，不做任何交互）
+src/messages.js                          命令行提示文字（中文 / 日语）
 src/patch.js                             由官方 app.asar 生成汉化版并自检
 src/asar.js                              零依赖的 asar 读写
 src/runtime/translator.js                翻译核心（页面和主进程共用）
 src/runtime/dom.js                       页面翻译（MutationObserver）
 src/runtime/main-hook.js                 主进程钩子
-locales/zh-CN/*.json                     词典
-docs/术语表.md                           统一的译法
+locales/zh-CN/*.json、locales/ja/*.json  词典
+docs/术语表.md、docs/用語集-ja.md         统一的译法
 tools/                                   维护词典用的工具
 test/                                    自动测试
 ```
 
 ## 维护词典
 
-词典在 `locales/zh-CN/` 下，按文件名顺序合并，后面的覆盖前面的：
+词典在 `locales/zh-CN/`（日语在 `locales/ja/`）下，按文件名顺序合并，后面的覆盖前面的：
 
 - `00-desktop.json`：桌面外壳（托盘、对话框、迁移向导）的文字
 - `10-ui.json`：界面文字
@@ -125,6 +130,7 @@ test/                                    自动测试
 cd tools && npm install && cd ..
 node tools/extract-webui.js "%LOCALAPPDATA%\Programs\antigravity\resources\bin\language_server.exe" webui
 node tools/find-untranslated.js webui/main.js untranslated.json
+node tools/find-untranslated.js webui/main.js untranslated-ja.json ja
 ```
 
 改完词典后运行测试，再双击 `汉化.bat` 重新生成：

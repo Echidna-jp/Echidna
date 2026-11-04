@@ -1,0 +1,10 @@
+{
+  "name": "antigravity-l10n",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Antigravity 2.x 桌面应用的简体中文 / 日语界面补丁（可一键还原）",
+  "license": "MIT",
+  "scripts": {
+    "test": "node test/run.js"
+  }
+}

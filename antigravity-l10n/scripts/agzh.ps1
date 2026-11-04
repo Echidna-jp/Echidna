@@ -1,9 +1,9 @@
 ﻿<#
-  Antigravity 中文界面 · Windows 启动脚本
+  Antigravity 本地化（简体中文 / 日本語）· Windows 启动脚本
 
-  由 汉化.bat / 还原英文.bat / 查看状态.bat 调用，也可以直接运行：
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\agzh.ps1 -Command apply
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\agzh.ps1 -Command apply -InstallDir "D:\Apps\Antigravity"
+  由 汉化.bat / 日本語化.bat 等入口调用，也可以直接运行：
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\agzh.ps1 -Command apply -Locale zh-CN
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\agzh.ps1 -Command apply -Locale ja -InstallDir "D:\Apps\Antigravity"
 
   这个脚本负责：找到安装目录、需要时关闭正在运行的 Antigravity、
   借 Antigravity.exe 自带的 Node 运行 src\cli.js（不需要另装 Node.js）、显示结果、按需重新打开。
@@ -15,6 +15,8 @@
 param(
   [ValidateSet('apply', 'restore', 'status')]
   [string]$Command = 'status',
+  [ValidateSet('zh-CN', 'ja')]
+  [string]$Locale = 'zh-CN',
   [string]$InstallDir = '',
   [switch]$Yes,
   [switch]$NoRestart
@@ -24,6 +26,44 @@ $ErrorActionPreference = 'Stop'
 $ToolRoot = Split-Path -Parent $PSScriptRoot
 $Cli = Join-Path (Join-Path $ToolRoot 'src') 'cli.js'
 $FuseSentinel = 'dL7pKGdnNz796PbbjQWNKmHXBZaB9tsX'
+
+$Messages = @{
+  'zh-CN' = @{
+    Title        = '==== Antigravity 中文界面 ===='
+    NotFound     = '没找到 Antigravity 2.x 的安装目录。'
+    NotFoundHint = '如果装在别的位置，可以手动指定（Antigravity.exe 所在的文件夹）：'
+    Running1     = 'Antigravity 正在运行，需要先把它关掉。'
+    Running2     = '正在进行的对话会被中断，没保存的内容可能会丢失。'
+    AskClose     = '输入 Y 关闭 Antigravity 并继续，直接回车取消'
+    Cancelled    = '已取消，没有做任何改动。'
+    StillRunning = 'Antigravity 没能完全退出。请在任务管理器里结束 Antigravity 后再运行一次。'
+    AskStart     = '现在打开 Antigravity 吗？输入 Y 打开，直接回车跳过'
+    Started      = '已重新打开 Antigravity。'
+    NoNode       = '这个版本的 Antigravity 不能借用内置的 Node 运行，系统里也没有找到 Node.js。请安装 Node.js 18 以上版本后再试。'
+    Timeout      = '处理超时（超过 3 分钟），已中止。'
+    NoLog        = '处理失败（退出码 {0}），没有输出日志。'
+    Error        = '出错了：'
+    DirExample   = 'D:\你的安装目录'
+  }
+  'ja' = @{
+    Title        = '==== Antigravity 日本語化 ===='
+    NotFound     = 'Antigravity 2.x のインストール先が見つかりません。'
+    NotFoundHint = '別の場所にインストールしている場合は、Antigravity.exe があるフォルダーを指定してください：'
+    Running1     = 'Antigravity が起動しています。先に終了する必要があります。'
+    Running2     = '実行中の会話は中断され、保存していない内容は失われる可能性があります。'
+    AskClose     = 'Y を入力すると Antigravity を終了して続行します（Enter のみでキャンセル）'
+    Cancelled    = 'キャンセルしました。何も変更していません。'
+    StillRunning = 'Antigravity を完全に終了できませんでした。タスク マネージャーで Antigravity を終了してから、もう一度実行してください。'
+    AskStart     = 'Antigravity を起動しますか？Y で起動、Enter のみでスキップ'
+    Started      = 'Antigravity を起動しました。'
+    NoNode       = 'このバージョンの Antigravity は内蔵の Node で実行できず、Node.js も見つかりません。Node.js 18 以降をインストールしてから、もう一度お試しください。'
+    Timeout      = '処理がタイムアウトしました（3 分以上）。中止しました。'
+    NoLog        = '処理に失敗しました（終了コード {0}）。ログが出力されていません。'
+    Error        = 'エラー：'
+    DirExample   = 'D:\インストール先'
+  }
+}
+$Msg = $Messages[$Locale]
 
 function Write-Warn([string]$msg) { Write-Host $msg -ForegroundColor Yellow }
 function Write-Err([string]$msg) { Write-Host $msg -ForegroundColor Red }
@@ -139,7 +179,7 @@ function Test-RunAsNodeFuse([string]$exe) {
 
 function Invoke-Cli([string]$exe, [string]$cmd, [string]$dir) {
   $log = Join-Path ([System.IO.Path]::GetTempPath()) ('agzh-' + [guid]::NewGuid().ToString('N') + '.log')
-  $argLine = '"{0}" {1} --dir "{2}" --log "{3}"' -f $Cli, $cmd, $dir, $log
+  $argLine = '"{0}" {1} --locale {2} --dir "{3}" --log "{4}"' -f $Cli, $cmd, $Locale, $dir, $log
 
   $useElectron = Test-RunAsNodeFuse $exe
   if ($useElectron) {
@@ -147,7 +187,7 @@ function Invoke-Cli([string]$exe, [string]$cmd, [string]$dir) {
   } else {
     $node = Get-Command node -ErrorAction SilentlyContinue
     if (-not $node) {
-      throw '这个版本的 Antigravity 不能借用内置的 Node 运行，系统里也没有找到 Node.js。请安装 Node.js 18 以上版本后再试。'
+      throw $Msg.NoNode
     }
     $runner = $node.Source
   }
@@ -159,7 +199,7 @@ function Invoke-Cli([string]$exe, [string]$cmd, [string]$dir) {
     $null = $p.Handle # 先取句柄，进程结束后才能拿到退出码
     if (-not $p.WaitForExit(180000)) {
       try { $p.Kill() } catch { }
-      throw '处理超时（超过 3 分钟），已中止。'
+      throw $Msg.Timeout
     }
     $code = $p.ExitCode
   } finally {
@@ -173,20 +213,20 @@ function Invoke-Cli([string]$exe, [string]$cmd, [string]$dir) {
     Get-Content -LiteralPath $log -Encoding UTF8 | ForEach-Object { Write-Host $_ }
     Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
   } elseif ($code -ne 0) {
-    Write-Err "处理失败（退出码 $code），没有输出日志。"
+    Write-Err ($Msg.NoLog -f $code)
   }
   return $code
 }
 
 try {
   Write-Host ''
-  Write-Host '==== Antigravity 中文界面 ====' -ForegroundColor Cyan
+  Write-Host $Msg.Title -ForegroundColor Cyan
 
   if ($InstallDir) { $dir = $InstallDir } else { $dir = Find-InstallDir }
   if (-not $dir -or -not (Test-InstallDir $dir)) {
-    Write-Err '没找到 Antigravity 2.x 的安装目录。'
-    Write-Host '如果装在别的位置，可以手动指定（Antigravity.exe 所在的文件夹）：'
-    Write-Host '  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\agzh.ps1 -Command apply -InstallDir "D:\你的安装目录"'
+    Write-Err $Msg.NotFound
+    Write-Host $Msg.NotFoundHint
+    Write-Host ('  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\agzh.ps1 -Command apply -Locale {0} -InstallDir "{1}"' -f $Locale, $Msg.DirExample)
     exit 1
   }
   $dir = (Resolve-Path -LiteralPath $dir).Path
@@ -197,12 +237,12 @@ try {
     $procs = @(Get-AppProcesses $dir)
     if ($procs.Count -gt 0) {
       $wasRunning = $true
-      Write-Warn 'Antigravity 正在运行，需要先把它关掉。'
-      Write-Warn '正在进行的对话会被中断，没保存的内容可能会丢失。'
+      Write-Warn $Msg.Running1
+      Write-Warn $Msg.Running2
       if (-not $Yes) {
-        $ans = Read-Host '输入 Y 关闭 Antigravity 并继续，直接回车取消'
+        $ans = Read-Host $Msg.AskClose
         if ($ans -notmatch '^\s*[Yy]') {
-          Write-Host '已取消，没有做任何改动。'
+          Write-Host $Msg.Cancelled
           exit 2
         }
       }
@@ -210,7 +250,7 @@ try {
       $deadline = (Get-Date).AddSeconds(20)
       while ((@(Get-AppProcesses $dir).Count -gt 0) -and ((Get-Date) -lt $deadline)) { Start-Sleep -Milliseconds 300 }
       if (@(Get-AppProcesses $dir).Count -gt 0) {
-        Write-Err 'Antigravity 没能完全退出。请在任务管理器里结束 Antigravity 后再运行一次。'
+        Write-Err $Msg.StillRunning
         exit 1
       }
       Start-Sleep -Milliseconds 500
@@ -222,16 +262,16 @@ try {
   if ($code -eq 0 -and $Command -ne 'status' -and -not $NoRestart) {
     $start = $wasRunning
     if (-not $start -and -not $Yes) {
-      $ans = Read-Host '现在打开 Antigravity 吗？输入 Y 打开，直接回车跳过'
+      $ans = Read-Host $Msg.AskStart
       $start = ($ans -match '^\s*[Yy]')
     }
     if ($start) {
       Start-Process -FilePath $exe -WorkingDirectory $dir | Out-Null
-      Write-Host '已重新打开 Antigravity。'
+      Write-Host $Msg.Started
     }
   }
   exit $code
 } catch {
-  Write-Err ('出错了：' + $_.Exception.Message)
+  Write-Err ($Msg.Error + $_.Exception.Message)
   exit 1
 }
